@@ -1,0 +1,126 @@
+name: CodexForge TDD CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax-check:
+    name: Python Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile all Python files
+        run: |
+          python -m py_compile router/llm_client.py
+          python -m py_compile acp/acp_client.py
+          python -m py_compile acp/diff_solver.py
+          python -m py_compile engine/tdd_orchestrator.py
+          python -m py_compile engine/run_example.py
+          python -m py_compile tests/buggy_divide.py
+          python -m py_compile tests/buggy_parser.py
+          python -m py_compile tests/buggy_dedup.py
+          echo "✓ All syntax checks passed"
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run unit tests
+        run: python -m pytest tests/test_llm_client.py tests/test_diff_solver.py tests/test_acp_client.py -v
+
+  tdd-mock-examples:
+    name: TDD Loop — Mock Mode
+    runs-on: ubuntu-latest
+    needs: syntax-check
+    strategy:
+      matrix:
+        example: [1, 2, 3]
+        include:
+          - example: 1
+            name: "Division by Zero"
+          - example: 2
+            name: "CSV Parser"
+          - example: 3
+            name: "List Dedup"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: "Run Example ${{ matrix.example }}: ${{ matrix.name }}"
+        run: python engine/run_example.py --example ${{ matrix.example }} --mode mock
+
+  docker-sandbox:
+    name: Docker Sandbox Test
+    runs-on: ubuntu-latest
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest (host)
+        run: pip install pytest
+
+      - name: Build sandbox container
+        run: docker compose -f sandbox/docker-compose.yml build
+
+      - name: Start sandbox container
+        run: docker compose -f sandbox/docker-compose.yml up -d
+
+      - name: Wait for healthy
+        run: |
+          for i in $(seq 1 10); do
+            STATUS=$(docker compose -f sandbox/docker-compose.yml ps --format json | python -c "import sys,json; print(json.load(sys.stdin)['Health'])" 2>/dev/null || echo "starting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "✓ Container healthy"
+              break
+            fi
+            echo "Waiting for container... ($i)"
+            sleep 3
+          done
+
+      - name: Verify pytest inside container
+        run: docker compose -f sandbox/docker-compose.yml exec -T sandbox_service python3 -c "import pytest; print(f'pytest {pytest.__version__} OK')"
+
+      - name: Run Example 1 via Docker
+        run: python engine/run_example.py --example 1 --mode mock
+
+      - name: Run Example 2 via Docker
+        run: python engine/run_example.py --example 2 --mode mock
+
+      - name: Run Example 3 via Docker
+        run: python engine/run_example.py --example 3 --mode mock
+
+      - name: Stop sandbox
+        if: always()
+        run: docker compose -f sandbox/docker-compose.yml down
