@@ -351,6 +351,102 @@ def test_strings():
     assert deduplicate(["b", "a", "b", "c", "a"]) == ["b", "a", "c"]
 ```'''
 
+        # ─── Example 4: Exception handling (retry) ─────────────────
+        if "buggy_retry" in prompt_lower or "retry" in prompt_lower or "keyboardinterrupt" in prompt_lower:
+            if is_repair:
+                return '''```python
+def retry(func, max_attempts=3):
+    """Execute func with retries on failure.
+
+    Only retries on Exception subclasses.
+    KeyboardInterrupt, SystemExit, and other BaseException
+    subclasses propagate immediately.
+    """
+    last_error = None
+    for attempt in range(max_attempts):
+        try:
+            return func()
+        except Exception as e:
+            last_error = e
+            continue
+    raise last_error
+```'''
+            if is_test_gen:
+                return '''```python
+import pytest
+from buggy_retry import retry
+
+def test_retry_succeeds():
+    """Function that succeeds should return its value."""
+    assert retry(lambda: 42) == 42
+
+def test_retry_eventually_succeeds():
+    """Function that fails then succeeds should return."""
+    attempts = [0]
+    def flaky():
+        attempts[0] += 1
+        if attempts[0] < 3:
+            raise ValueError("not yet")
+        return "ok"
+    assert retry(flaky) == "ok"
+
+def test_keyboard_interrupt_not_retried():
+    """KeyboardInterrupt must propagate immediately — only 1 attempt, not 3."""
+    attempts = [0]
+    def raise_keyboard():
+        attempts[0] += 1
+        raise KeyboardInterrupt()
+    with pytest.raises(KeyboardInterrupt):
+        retry(raise_keyboard, max_attempts=3)
+    assert attempts[0] == 1, f"Expected 1 attempt but got {attempts[0]} — KeyboardInterrupt was retried!"
+
+def test_system_exit_not_retried():
+    """SystemExit must propagate immediately — only 1 attempt, not 3."""
+    attempts = [0]
+    def raise_exit():
+        attempts[0] += 1
+        raise SystemExit(1)
+    with pytest.raises(SystemExit):
+        retry(raise_exit, max_attempts=3)
+    assert attempts[0] == 1, f"Expected 1 attempt but got {attempts[0]} — SystemExit was retried!"
+```'''
+
+        # ─── Example 5: Recursive list flattening ──────────────────
+        if "buggy_flatten" in prompt_lower or "flatten" in prompt_lower:
+            if is_repair:
+                return '''```python
+def flatten(lst):
+    """Recursively flatten a nested list into a single-level list."""
+    result = []
+    for item in lst:
+        if isinstance(item, list):
+            result.extend(flatten(item))
+        else:
+            result.append(item)
+    return result
+```'''
+            if is_test_gen:
+                return '''```python
+import pytest
+from buggy_flatten import flatten
+
+def test_flat_list():
+    assert flatten([1, 2, 3]) == [1, 2, 3]
+
+def test_one_level_nesting():
+    assert flatten([1, [2, 3], 4]) == [1, 2, 3, 4]
+
+def test_deep_nesting():
+    """Must handle arbitrarily deep nesting."""
+    assert flatten([1, [2, [3, [4, [5]]]]]) == [1, 2, 3, 4, 5]
+
+def test_mixed_nesting():
+    assert flatten([1, [2, [3, 4]], 5]) == [1, 2, 3, 4, 5]
+
+def test_empty_nested():
+    assert flatten([[], [1], [], [2, []]]) == [1, 2]
+```'''
+
         # ─── Fallback ─────────────────────────────────────────────
         logger.warning(
             f"Mock: No specific handler matched for prompt. "
@@ -363,3 +459,4 @@ def test_strings():
             "pass\n"
             "```"
         )
+

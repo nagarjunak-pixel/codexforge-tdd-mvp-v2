@@ -68,6 +68,26 @@ EXAMPLES = {
             "Currently it uses sorted(set()) which loses insertion order."
         ),
     },
+    4: {
+        "name": "Exception Handling (Retry)",
+        "source": "buggy_retry.py",
+        "test": "test_buggy_retry.py",
+        "task": (
+            "Fix the retry() function in buggy_retry.py so that it only "
+            "catches Exception subclasses and lets KeyboardInterrupt, SystemExit, "
+            "and other BaseException subclasses propagate immediately without retrying."
+        ),
+    },
+    5: {
+        "name": "Nested List Flattening (Recursive)",
+        "source": "buggy_flatten.py",
+        "test": "test_buggy_flatten.py",
+        "task": (
+            "Fix the flatten() function in buggy_flatten.py so that it "
+            "recursively flattens arbitrarily nested lists. Currently it only "
+            "handles one level of nesting. [1, [2, [3, 4]], 5] should return [1, 2, 3, 4, 5]."
+        ),
+    },
 }
 
 
@@ -79,8 +99,8 @@ def main():
     parser.add_argument(
         "--example",
         type=int,
-        choices=[1, 2, 3],
-        help="Run a built-in example: 1=divide, 2=csv_parser, 3=dedup"
+        choices=[1, 2, 3, 4, 5],
+        help="Run a built-in example: 1=divide, 2=csv_parser, 3=dedup, 4=retry, 5=flatten"
     )
     parser.add_argument(
         "--target",
