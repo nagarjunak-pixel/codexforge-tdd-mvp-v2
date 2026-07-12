@@ -1,0 +1,50 @@
+{
+  "name": "codexforge-tdd",
+  "displayName": "CodexForge TDD Agent",
+  "description": "VS Code extension for CodexForge Self-Correcting TDD Sandbox. Sends buffer diffs via JSON-RPC to the TDD orchestrator agent.",
+  "version": "0.2.0",
+  "publisher": "codexforge",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:codexforge.sendBuffer",
+    "onCommand:codexforge.startTDD"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexforge.sendBuffer",
+        "title": "CodexForge: Send Current Buffer to Agent"
+      },
+      {
+        "command": "codexforge.startTDD",
+        "title": "CodexForge: Start TDD Loop"
+      }
+    ],
+    "configuration": {
+      "title": "CodexForge TDD",
+      "properties": {
+        "codexforge.agentHost": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Hostname of the CodexForge ACP agent server."
+        },
+        "codexforge.agentPort": {
+          "type": "number",
+          "default": 9120,
+          "description": "Port of the CodexForge ACP agent server."
+        }
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codexforge/codexforge-tdd-mvp"
+  },
+  "license": "MIT"
+}

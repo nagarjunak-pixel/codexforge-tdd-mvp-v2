@@ -1,0 +1,2 @@
+# Workspace directory - files placed here are visible inside the Docker container
+# This directory is volume-mounted at /workspace in the sandbox container.

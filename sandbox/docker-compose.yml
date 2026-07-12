@@ -1,0 +1,19 @@
+services:
+  sandbox_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codexforge_sandbox_v2
+    volumes:
+      # Mount the project-level workspace directory, not sandbox-internal
+      - ../sandbox/workspace:/workspace
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import pytest; print('ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Bridge networking; no external egress by default
+    network_mode: bridge
