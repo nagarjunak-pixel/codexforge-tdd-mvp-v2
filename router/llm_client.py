@@ -32,7 +32,7 @@ class LLMClient:
         Args:
             mode: "live" (requires API key) or "mock" (offline, rule-based responses).
                   No silent fallback — you must explicitly choose.
-            provider: "anthropic" or "openai". Auto-detected from available keys if not set.
+            provider: "anthropic", "openai", or "openrouter". Auto-detected from available keys if not set.
         """
         self.mode = mode.lower()
         if self.mode not in ("live", "mock"):
@@ -42,12 +42,15 @@ class LLMClient:
 
         self.anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
         self.openai_key = os.environ.get("OPENAI_API_KEY")
+        self.openrouter_key = os.environ.get("OPENROUTER_API_KEY")
 
         # Determine provider
         if provider:
             self.provider = provider.lower()
         elif self.anthropic_key:
             self.provider = "anthropic"
+        elif self.openrouter_key:
+            self.provider = "openrouter"
         elif self.openai_key:
             self.provider = "openai"
         else:
@@ -63,7 +66,8 @@ class LLMClient:
                     "ERROR: mode='live' but no API key found!\n\n"
                     "Set one of the following environment variables:\n"
                     "  export ANTHROPIC_API_KEY='sk-ant-...'\n"
-                    "  export OPENAI_API_KEY='sk-...'\n\n"
+                    "  export OPENAI_API_KEY='sk-...'\n"
+                    "  export OPENROUTER_API_KEY='sk-or-...'\n\n"
                     "Or use --mode=mock for offline testing.\n"
                     + "=" * 60
                 )
@@ -71,7 +75,8 @@ class LLMClient:
             if not self.model_name:
                 self.model_name = {
                     "anthropic": "claude-3-5-sonnet-20241022",
-                    "openai": "gpt-4o"
+                    "openai": "gpt-4o",
+                    "openrouter": "google/gemini-2.5-flash"
                 }.get(self.provider)
 
             logger.info(
@@ -177,13 +182,32 @@ class LLMClient:
             }
             return url, headers, payload
 
+        elif self.provider == "openrouter":
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.openrouter_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/nagarjunak-pixel/codexforge-tdd-mvp-v2",
+                "X-Title": "CodexForge TDD"
+            }
+            messages = []
+            if system_instruction:
+                messages.append({"role": "system", "content": system_instruction})
+            messages.append({"role": "user", "content": prompt})
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "temperature": 0.2
+            }
+            return url, headers, payload
+
         raise ConfigurationError(f"Unknown provider: {self.provider}")
 
     def _parse_response(self, data: dict) -> str:
         """Parse the API response based on provider."""
         if self.provider == "anthropic":
             return data["content"][0]["text"]
-        elif self.provider == "openai":
+        elif self.provider in ("openai", "openrouter"):
             return data["choices"][0]["message"]["content"]
         raise ConfigurationError(f"Cannot parse response for provider: {self.provider}")
 
