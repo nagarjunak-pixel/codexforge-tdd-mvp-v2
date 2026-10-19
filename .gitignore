@@ -29,3 +29,9 @@ sandbox/workspace/.pytest_cache/
 # Environment
 .env
 .env.local
+
+# Private settings variants (.env.backup and similar) - never commit (added 2026-10-19)
+.env.*
+!.env.example
+!.env.template
+!.env.sample
